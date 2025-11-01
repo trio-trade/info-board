@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Інформаційний екран</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <style>
+    :root{
+      --bg:#0b0b0f; --panel:#141420; --text:#e8e8ee; --muted:#9aa0a6; --accent:#53d6ff;
+      --gap:12px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Noto Sans',Arial;
+      line-height:1.35;
+    }
+    .wrap{
+      height:100vh; width:100vw; display:grid; gap:var(--gap);
+      grid-template-columns:1fr 1fr 1fr; padding:var(--gap);
+    }
+    .col{
+      display:flex; flex-direction:column; min-height:0;
+      background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:18px;
+      overflow:hidden;
+    }
+    .title{
+      padding:10px 16px; font-weight:700; letter-spacing:.03em;
+      font-size:min(1.6vw,1.6vh); border-bottom:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,0));
+      white-space:nowrap; text-overflow:ellipsis; overflow:hidden;
+    }
+    .sheet{ flex:1; min-height:0; display:flex }
+    .sheet iframe{ border:0; width:100%; height:100%; background:#fff }
+
+    .right{
+      display:grid; grid-template-rows:1fr 1fr 1fr; gap:var(--gap);
+      background:transparent; border:none; padding:0;
+    }
+    .card{
+      background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:18px;
+      padding:16px; display:flex; flex-direction:column; min-height:0; overflow:hidden;
+    }
+    .card h2{ margin:0 0 8px; font-size:min(1.6vw,1.6vh); color:var(--accent) }
+    .clock{ display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center }
+    .clock .time{ font-size:min(6vw,6vh); font-weight:800; line-height:1 }
+    .clock .date{ margin-top:8px; font-size:min(2vw,2vh); color:var(--muted) }
+    .contacts,.ann{ overflow:auto; font-size:min(1.4vw,1.4vh) }
+    .contacts pre,.ann pre{ margin:0; white-space:pre-wrap; word-break:break-word; line-height:1.4 }
+    @media (min-width:2560px){
+      .title,.card h2{ font-size:min(1.4vw,1.4vh) }
+      .contacts,.ann{ font-size:min(1.2vw,1.2vh) }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Ліва колонка -->
+    <section class="col">
+      <div class="title">Графік робочого часу</div>
+      <div class="sheet">
+        <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRbwBIpbjgKzTA-yvCGYw9TtsrdqnyBWBfxem3MJa7z3M_zUKRunSoaqUu81l9rRCGKF8JCYUwNfFfi/pubhtml?widget=true&headers=false" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- Середня колонка -->
+    <section class="col">
+      <div class="title">Відпрацьовані години</div>
+      <div class="sheet">
+        <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQp9sqcs_rqLRRIWJe_VzjCAUkQAwmNX1OJ9Z36JWH6A9dufcxS5AHibg12H9MHLPwtwEXJgZDP10k3/pubhtml?widget=true&headers=false" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- Права колонка: 3 блоки -->
+    <section class="right">
+      <div class="card">
+        <h2>Дата і час</h2>
+        <div class="clock">
+          <div class="time" id="time">--:--:--</div>
+          <div class="date" id="date">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Контакти керівників</h2>
+        <div class="contacts">
+<pre>Начальник Цеху
+Чиркін Олександр
+096 646 93 22
+
+Бригадири:
+Авер'янов Ігор — 068 679 59 98
+Заграничний Марк — 096 047 19 58
+Кісітов Андрій — 050 886 46 11</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Оголошення</h2>
+        <div class="ann"><!-- додай текст оголошення тут --></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function pad(n){return String(n).padStart(2,'0')}
+    function tick(){
+      const now=new Date();
+      const t=`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const d=now.toLocaleDateString('uk-UA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+      document.getElementById('time').textContent=t;
+      document.getElementById('date').textContent=d.charAt(0).toUpperCase()+d.slice(1);
+    }
+    setInterval(tick,1000); tick();
+  </script>
+</body>
+</html>
