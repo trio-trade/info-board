@@ -58,10 +58,90 @@ body{
 .clock .date{margin-top:8px; font-size:min(3vw,3vh); color:var(--muted)}
 .contacts, .ann{font-size:min(2vw,2vh); overflow:auto;}
 .contacts pre, .ann pre{margin:0; white-space:pre-wrap;font-size: 16px;}
-  
+    canvas#snow {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+  }
+
+
+
+   /*кулька*/
+
+
+  /* Блок у правому верхньому куті */
+  .corner-top-right {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 120px;
+    height: 150px;
+    pointer-events: none;
+  }
+
+  .hanger {
+    position: absolute;
+    width: 1px;
+    height: 70px;
+    left: 50%;
+    transform-origin: top;
+    animation: sway 3.5s ease-in-out infinite;
+  }
+
+  /* Різні позиції трьох шарів */
+  .h1 { left: 20%; animation-delay: -0.4s; }
+  .h2 { left: 50%; animation-delay: -0.9s; }
+  .h3 { left: 80%; animation-delay: -1.2s; }
+
+  /* Мотузочка */
+  .hanger::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -1px;
+    width: 2px;
+    height: 45px;
+    background: #ffffff66;
+    border-radius: 2px;
+  }
+
+  /* Кулька */
+  .ornament {
+    position: absolute;
+    top: 45px;
+    left: -20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.15);
+  }
+
+  .red   { background: radial-gradient(circle at 25% 25%, #fff8, #ff3b3b 40%, #b11); }
+  .gold  { background: radial-gradient(circle at 25% 25%, #fff8, #ffd86b 40%, #c49110); }
+  .blue  { background: radial-gradient(circle at 25% 25%, #fff8, #6db8ff 40%, #0a4e8e); }
+
+  @keyframes sway {
+    0% { transform: rotate(-5deg); }
+    50% { transform: rotate(6deg); }
+    100% { transform: rotate(-5deg); }
+  }
+
+  /*кулька*/
+
+
+
 </style>
 </head>
 <body>
+<canvas id="snow"></canvas>
+<div class="corner-top-right">
+  <div class="hanger h1"><div class="ornament red"></div></div>
+  <div class="hanger h2"><div class="ornament gold"></div></div>
+  <div class="hanger h3"><div class="ornament blue"></div></div>
+</div>
 <div class="wrap">
   <!-- Ліва колонка -->
   <section class="col">
@@ -114,14 +194,79 @@ body{
     <div class="card">
       <h2>Оголошення</h2>
       <div class="ann"><!-- додай текст оголошення тут -->
-<pre>1. ОБОВ'ЯЗКОВО! Після отримання бронювання, пройти ВЛК та отримати військово-обліковий  документ. Копію військово-облікового документу та витяг з Резерву надати до кінця 2025 року.
-2. Працівники, у яких є діти віком до 15 років, мають принести свідотство про народження дитини.</pre>
+<pre>1. Працівники, у яких є діти віком до 15 років, мають принести свідотство про народження дитини.</pre>
         
       
       </div>
     </div>
   </section>
 </div>
+<script>
+(function() {
+  const canvas = document.getElementById('snow');
+  const ctx = canvas.getContext('2d');
+  let w = canvas.width = innerWidth;
+  let h = canvas.height = innerHeight;
+
+  window.addEventListener('resize', () => {
+    w = canvas.width = innerWidth;
+    h = canvas.height = innerHeight;
+  });
+
+  const flakesCount = Math.min(220, Math.floor((w*h)/4000));
+  const flakes = [];
+
+  function rand(min, max){ return Math.random()*(max-min)+min; }
+
+  for (let i=0;i<flakesCount;i++){
+    flakes.push({
+      x: rand(0,w),
+      y: rand(0,h),
+      r: rand(0.7,3.2),
+      vx: rand(-0.5,0.5),
+      vy: rand(0.3,1.2),
+      swing: rand(0,Math.PI*2),
+      swingSpeed: rand(0.002,0.01)
+    });
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    for (let f of flakes){
+      ctx.moveTo(f.x,f.y);
+      ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+    }
+    ctx.fill();
+  }
+
+  function update(){
+    for (let f of flakes){
+      f.swing += f.swingSpeed;
+      f.x += Math.sin(f.swing) * f.vx + f.vx;
+      f.y += f.vy;
+
+      if (Math.random() < 0.0008) f.x += rand(-1,1);
+
+      if (f.y > h + 10 || f.x < -10 || f.x > w + 10){
+        f.x = rand(0,w);
+        f.y = -10;
+        f.r = rand(0.7,3.2);
+        f.vx = rand(-0.5,0.5);
+        f.vy = rand(0.3,1.2);
+      }
+    }
+  }
+
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
 
 <script>
 function pad(n){return String(n).padStart(2,'0')}
