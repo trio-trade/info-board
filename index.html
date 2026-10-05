@@ -2,652 +2,188 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0b0f">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Інформаційний екран</title>
-
-<!-- =========================================================
-     1. ОСНОВНІ СТИЛІ
-     Оптимізовано під Raspberry Pi + 4K TV.
-     ========================================================= -->
 <style>
-:root {
-  --bg: #0b0b0f;
-  --panel: #141420;
-  --text: #e8e8ee;
-  --muted: #9aa0a6;
-  --accent: #53d6ff;
-  --danger: #ff5376;
-  --gap: 12px;
-  --radius: 18px;
-  --border: 1px solid rgba(255,255,255,.08);
+:root{
+  --bg:#0b0b0f; --panel:#141420; --text:#e8e8ee; --muted:#9aa0a6; --accent:#53d6ff;
+  --gap:12px;
 }
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Noto Sans',Arial;
 }
-
-html,
-body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
+.wrap{
+  height:100vh; width:100vw; display:grid; gap:var(--gap);
+  grid-template-columns:1fr 1fr 1fr; padding:var(--gap);
 }
-
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell,
-               "Noto Sans", Arial, sans-serif;
-  text-rendering: optimizeSpeed;
-  -webkit-font-smoothing: antialiased;
+.col{
+  display:flex; flex-direction:column; background:var(--panel);
+  border:1px solid rgba(255,255,255,.08); border-radius:18px;
+  overflow:hidden;
 }
-
-h1, h2, p, pre, ul {
-  margin: 0;
+.title{
+  padding:10px 16px; font-weight:700; font-size:min(3vw,3vh);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,0));
+  text-align:center;
 }
-
-button,
-iframe {
-  font: inherit;
+.sheet{
+  flex:1; min-height:0; position:relative; overflow:hidden;
 }
-
-/* =========================================================
-   2. ОСНОВНА СІТКА — 3 КОЛОНКИ
-   ========================================================= */
-
-.wrap {
-  width: 100vw;
-  height: 100vh;
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr;
-  gap: var(--gap);
-  padding: var(--gap);
-  contain: layout size;
-}
-
-.col {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--panel);
-  border: var(--border);
-  border-radius: var(--radius);
-  contain: layout paint;
-}
-
-.title {
-  flex: 0 0 auto;
-  padding: 10px 16px;
-  border-bottom: var(--border);
-  text-align: center;
-  font-weight: 700;
-  font-size: clamp(20px, 2.2vw, 42px);
-  line-height: 1.1;
-  background: rgba(255,255,255,.035);
-}
-
-/* =========================================================
-   3. GOOGLE SHEETS
-   Важливо: не використовуємо 400% iframe + scale(.25).
-   Це змушувало Chromium рендерити величезну поверхню,
-   що особливо важко для Raspberry Pi у 4K.
-   ========================================================= */
-
-.sheet {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  background: #fff;
-  contain: strict;
-  overflow: hidden;
-}
-
-.sheet iframe {
-  position: absolute;
-  inset: 0;
-  display: block;
-  /* Google Sheets має власний внутрішній масштаб. Легке зменшення
-     не дає таблиці вилазити за межі 4K-блоку і значно дешевше,
-     ніж старий варіант 400% + scale(.25). */
-  width: 100%;
-  height: 100%;
-  transform: none;
+.sheet .scale{
+  position:absolute; inset:0;
+  transform:scale(0.25); /* 0.8 = 80% розміру, можна підрегулювати */
   transform-origin: top left;
-  border: 0;
-  background: #fff;
-
-  /*
-   * Фільтр залишаємо, щоб таблиця залишилась темною.
-   * Якщо потрібна максимальна продуктивність — його можна
-   * вимкнути одним рядком у .sheet iframe.
-   */
-  filter: invert(.9) hue-rotate(180deg) brightness(1.1);
-
-  contain: strict;
+  width:400%; height:400%; /* компенсує scale */
+}
+.sheet iframe{
+  border:0; width:100%; height:100%; background:#fff; filter: invert(0.9) hue-rotate(180deg) brightness(1.1);
 }
 
-/* =========================================================
-   4. ПРАВА КОЛОНКА
-   ========================================================= */
-
-.right {
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: var(--gap);
-  contain: layout;
+/* права колонка */
+.right{
+  display:grid; grid-template-rows:1fr 1fr 1fr; gap:var(--gap);
 }
-
-.right.bday-visible {
-  grid-template-rows: repeat(3, minmax(0, 1fr)) auto;
+.card{
+  background:var(--panel); border:1px solid rgba(255,255,255,.08);
+  border-radius:18px; padding:16px; display:flex; flex-direction:column;
+  overflow:hidden;
 }
-
-.card {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 16px;
-  background: var(--panel);
-  border: var(--border);
-  border-radius: var(--radius);
-  contain: layout paint;
-}
-
-.card h2 {
-  flex: 0 0 auto;
-  margin: 0 0 8px;
-  color: var(--accent);
-  text-align: center;
-  font-size: clamp(20px, 2.2vw, 42px);
-  line-height: 1.1;
-}
-
-.clock {
-  min-height: 0;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.clock .time {
-  font-size: clamp(58px, 7vw, 150px);
-  font-weight: 800;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.clock .date {
-  margin-top: 8px;
-  color: var(--muted);
-  text-align: center;
-  font-size: clamp(18px, 2vw, 36px);
-  line-height: 1.15;
-}
-
-.contacts,
-.ann {
-  min-height: 0;
-  overflow: auto;
-  font-size: clamp(16px, 1.35vw, 28px);
-  contain: content;
-}
-
-.contacts pre,
-.ann pre {
-  white-space: pre-wrap;
-  font: inherit;
-  line-height: 1.35;
-}
-
-/* =========================================================
-   5. ДНІ НАРОДЖЕННЯ
-   ========================================================= */
-
-#bday-card {
-  display: none;
-}
-
-.right.bday-visible #bday-card {
-  min-height: 0;
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-
-.bday-container {
-  min-height: 0;
-  overflow: auto;
-}
-
-#bday-title-dynamic {
-  margin-bottom: 8px;
-  color: var(--danger);
-  text-align: center;
-  font-size: clamp(16px, 1.2vw, 24px);
-  font-weight: 700;
-}
-
-#bday-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.bday-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255,255,255,.05);
-  font-size: clamp(15px, 1.1vw, 22px);
-}
-
-.bday-item:last-child {
-  border-bottom: 0;
-}
-
-.bday-name {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* =========================================================
-   6. СНІГ
-   ========================================================= */
-
-#snow {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 9999;
-}
-
-@media (min-width: 3000px) {
-  /*
-   * 4K TV: трохи зменшуємо декоративні елементи.
-   * Контент залишається великим і читабельним.
-   */
-  :root {
-    --gap: 14px;
+.card h2{margin:0 0 8px; font-size:min(3vw,3vh); color:var(--accent); text-align:center}
+.clock{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;}
+.clock .time{font-size:min(10vw,10vh); font-weight:800; line-height:1}
+.clock .date{margin-top:8px; font-size:min(3vw,3vh); color:var(--muted)}
+.contacts, .ann{font-size:min(2vw,2vh); overflow:auto;}
+.contacts pre, .ann pre{margin:0; white-space:pre-wrap;font-size: 16px;}
+    canvas#snow {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
   }
 
-  .card {
-    padding: 18px;
-  }
-}
 
-@media (prefers-reduced-motion: reduce) {
+
+   /*кулька*/
+
+
+  /* Блок у правому верхньому куті */
+  .corner-top-right {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 120px;
+    height: 150px;
+    pointer-events: none;
+  }
+
   .hanger {
-    animation: none !important;
+    position: absolute;
+    width: 1px;
+    height: 70px;
+    left: 50%;
+    transform-origin: top;
+    animation: sway 3.5s ease-in-out infinite;
   }
-}
 
-/* =========================================================
-   7. ЯЛИНКОВІ КУЛЬКИ — ЛЕГКА АНІМАЦІЯ
-   ========================================================= */
+  /* Різні позиції трьох шарів */
+  .h1 { left: 20%; animation-delay: -0.4s; }
+  .h2 { left: 50%; animation-delay: -0.9s; }
+  .h3 { left: 80%; animation-delay: -1.2s; }
 
-.corner-top-right {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  width: 120px;
-  height: 150px;
-  pointer-events: none;
-  z-index: 10000;
-}
+  /* Мотузочка */
+  .hanger::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -1px;
+    width: 2px;
+    height: 45px;
+    background: #ffffff66;
+    border-radius: 2px;
+  }
 
-.hanger {
-  position: absolute;
-  width: 1px;
-  height: 70px;
-  transform-origin: top;
-  animation: sway 4s ease-in-out infinite;
-}
+  /* Кулька */
+  .ornament {
+    position: absolute;
+    top: 45px;
+    left: -20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.15);
+  }
 
-.h1 { left: 20%; animation-delay: -.4s; }
-.h2 { left: 50%; animation-delay: -.9s; }
-.h3 { left: 80%; animation-delay: -1.2s; }
+  .red   { background: radial-gradient(circle at 25% 25%, #fff8, #ff3b3b 40%, #b11); }
+  .gold  { background: radial-gradient(circle at 25% 25%, #fff8, #ffd86b 40%, #c49110); }
+  .blue  { background: radial-gradient(circle at 25% 25%, #fff8, #6db8ff 40%, #0a4e8e); }
 
-.hanger::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -1px;
-  width: 2px;
-  height: 45px;
-  background: rgba(255,255,255,.4);
-  border-radius: 2px;
-}
+  @keyframes sway {
+    0% { transform: rotate(-5deg); }
+    50% { transform: rotate(6deg); }
+    100% { transform: rotate(-5deg); }
+  }
 
-.ornament {
-  position: absolute;
-  top: 45px;
-  left: -20px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.15);
-}
+  /*кулька*/
 
-.red {
-  background: radial-gradient(circle at 25% 25%, rgba(255,255,255,.55),
-              #ff3b3b 40%, #b11);
-}
 
-.gold {
-  background: radial-gradient(circle at 25% 25%, rgba(255,255,255,.55),
-              #ffd86b 40%, #c49110);
-}
-
-.blue {
-  background: radial-gradient(circle at 25% 25%, rgba(255,255,255,.55),
-              #6db8ff 40%, #0a4e8e);
-}
-
-@keyframes sway {
-  0%, 100% { transform: rotate(-5deg); }
-  50% { transform: rotate(6deg); }
-}
-</style>
-<style>
-/* ===== Компактні праві блоки для TV / Raspberry Pi ===== */
-.right > .card:nth-child(2),
-.right > .card:nth-child(3) {
-  padding: 12px 16px !important;
-}
-
-.right > .card:nth-child(2) h2,
-.right > .card:nth-child(3) h2 {
-  font-size: clamp(18px, 1.15vw, 26px) !important;
-  margin: 0 0 6px !important;
-}
-
-.right > .card:nth-child(2) pre,
-.right > .card:nth-child(3) pre {
-  font-size: clamp(13px, 0.78vw, 18px) !important;
-  line-height: 1.12 !important;
-  margin: 0 !important;
-  white-space: pre-wrap !important;
-  overflow: hidden !important;
-}
-</style>
-<style>
-
-/* ===== Права колонка: автоматичне рівномірне заповнення ===== */
-.right {
-  display: grid !important;
-  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
-  align-content: stretch;
-  min-height: 0;
-  height: 100%;
-}
-
-/* Коли є оголошення, але немає ДН — 3 рівні блоки. */
-.right.has-announcement:not(.has-birthday) {
-  grid-template-rows: repeat(3, minmax(0, 1fr)) !important;
-}
-
-/* Коли є ДН, але немає оголошення — 3 рівні блоки. */
-.right.has-birthday:not(.has-announcement) {
-  grid-template-rows: repeat(3, minmax(0, 1fr)) !important;
-}
-
-/* Коли є і оголошення, і ДН — 4 рівні блоки. */
-.right.has-announcement.has-birthday {
-  grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
-}
-
-/* Немає зайвого прокручування всередині телевізійного інтерфейсу. */
-.right > .card {
-  min-height: 0 !important;
-  max-height: none !important;
-  overflow: hidden !important;
-  box-sizing: border-box;
-}
-
-/* Текстові блоки не створюють внутрішню прокрутку. */
-.right > .card pre,
-.right > .card .ann,
-.right > .card #announcement-content,
-.right > .card #bday-list {
-  max-height: 100%;
-  overflow: hidden !important;
-}
-
-</style>
-<style>
-
-/* ===== Пропорційний блок Дата і час ===== */
-.right > .card.clock {
-  min-height: 0 !important;
-  height: 100%;
-  box-sizing: border-box;
-  justify-content: space-between;
-  overflow: hidden;
-}
-.right > .card.clock h2 {
-  flex: 0 0 auto;
-  margin-bottom: 4px;
-}
-.right > .card.clock .time {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  overflow: hidden;
-}
-.right > .card.clock .date {
-  flex: 0 0 auto;
-  margin-top: 4px;
-}
-
-</style>
-<style>
-
-/* ===== Фікс: годинник не виходить за межі свого блоку ===== */
-.right > .card.clock {
-  position: relative;
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-}
-.right > .card.clock .time {
-  min-height: 0 !important;
-  flex: 1 1 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow: hidden !important;
-}
-.right > .card.clock .time * {
-  max-width: 100% !important;
-  max-height: 100% !important;
-}
-.right > .card.clock .time,
-.right > .card.clock .time span,
-.right > .card.clock .time div {
-  font-size: clamp(24px, 3vw, 58px) !important;
-  line-height: .9 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-}
-.right > .card.clock h2 {
-  flex: 0 0 auto !important;
-  font-size: clamp(16px, 1vw, 22px) !important;
-  line-height: 1 !important;
-  margin: 0 0 4px !important;
-}
-.right > .card.clock .date {
-  flex: 0 0 auto !important;
-  font-size: clamp(13px, .8vw, 18px) !important;
-  line-height: 1.05 !important;
-  margin: 4px 0 0 !important;
-}
-
-</style>
-<style>
-
-/* ===== ФІНАЛЬНИЙ ФІКС ГОДИННИКА ===== */
-.right > .card:has(.clock) {
-  min-width: 0 !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-  container-type: size;
-}
-
-.right > .card:has(.clock) > h2 {
-  flex: 0 0 auto !important;
-  margin: 0 0 4px !important;
-  font-size: clamp(15px, 1vw, 22px) !important;
-  line-height: 1 !important;
-}
-
-.right > .card:has(.clock) .clock {
-  min-width: 0 !important;
-  min-height: 0 !important;
-  width: 100% !important;
-  flex: 1 1 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow: hidden !important;
-}
-
-.right > .card:has(.clock) .clock .time {
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  flex: 0 1 auto !important;
-  display: block !important;
-  text-align: center !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  font-size: clamp(28px, 15cqw, 62px) !important;
-  line-height: .9 !important;
-  font-weight: 800 !important;
-  font-variant-numeric: tabular-nums !important;
-}
-
-.right > .card:has(.clock) .clock .date {
-  flex: 0 0 auto !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  margin-top: 5px !important;
-  font-size: clamp(12px, 4cqw, 18px) !important;
-  line-height: 1 !important;
-}
 
 </style>
 </head>
-
 <body>
+<meta http-equiv="refresh" content="1800">
 
-<!-- =========================================================
-     БЛОК 1. ДЕКОР
-     ========================================================= -->
-<canvas id="snow" aria-hidden="true" style="display:none;"></canvas>
-
-<!--=========================================================
-Бблок з кульками на новий рік 
-========================================================= -->
-
-
-<!-- <div class="corner-top-right" aria-hidden="true">
+ <!-- сніг та кульки    -->
+<!-- <canvas id="snow"></canvas>
+<div class="corner-top-right">
   <div class="hanger h1"><div class="ornament red"></div></div>
   <div class="hanger h2"><div class="ornament gold"></div></div>
   <div class="hanger h3"><div class="ornament blue"></div></div>
-</div> -->
+</div>-->
 
-
-<!-- =========================================================
-     БЛОК 2. ОСНОВНИЙ ЕКРАН
-     ========================================================= -->
-<main class="wrap">
-
-  <!-- =======================================================
-       БЛОК 2.1. ГРАФІК РОБОЧОГО ЧАСУ
-       ======================================================= -->
-  <section class="col" aria-label="Графік робочого часу">
+<div class="wrap">
+  <!-- Ліва колонка -->
+  <section class="col">
     <div class="title">Графік робочого часу</div>
-
     <div class="sheet">
-      <iframe
-        src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRbwBIpbjgKzTA-yvCGYw9TtsrdqnyBWBfxem3MJa7z3M_zUKRunSoaqUu81l9rRCGKF8JCYUwNfFfi/pubhtml?widget=true&headers=false"
-        title="Графік робочого часу"
-        loading="eager"
-        scrolling="no"
-        referrerpolicy="no-referrer">
-      </iframe>
+      <div class="scale">
+        <iframe 
+  src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRbwBIpbjgKzTA-yvCGYw9TtsrdqnyBWBfxem3MJa7z3M_zUKRunSoaqUu81l9rRCGKF8JCYUwNfFfi/pubhtml?widget=true&headers=false" 
+  width="100%" 
+  height="800" 
+  style="border: none; transform: scale(1); transform-origin: 0 0;">
+</iframe>
+      <!--   <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRbwBIpbjgKzTA-yvCGYw9TtsrdqnyBWBfxem3MJa7z3M_zUKRunSoaqUu81l9rRCGKF8JCYUwNfFfi/pubhtml?widget=true&headers=false"></iframe>
+      --> </div>
     </div>
   </section>
 
-
-  <!-- =======================================================
-       БЛОК 2.2. ВІДПРАЦЬОВАНІ ГОДИНИ
-       Завантажуємо після першого iframe, щоб Raspberry Pi
-       не обробляв два Google Sheets одночасно під час старту.
-       ======================================================= -->
-  <section class="col" aria-label="Відпрацьовані години">
+  <!-- Середня колонка -->
+  <section class="col">
     <div class="title">Відпрацьовані години</div>
-
     <div class="sheet">
-      <iframe
-        id="hours-frame"
-        data-src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRbwBIpbjgKzTA-yvCGYw9TtsrdqnyBWBfxem3MJa7z3M_zUKRunSoaqUu81l9rRCGKF8JCYUwNfFfi/pubhtml?widget=true&headers=false"
-        title="Відпрацьовані години"
-        loading="lazy"
-        scrolling="no"
-        referrerpolicy="no-referrer">
-      </iframe>
+      <div class="scale">
+        <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQp9sqcs_rqLRRIWJe_VzjCAUkQAwmNX1OJ9Z36JWH6A9dufcxS5AHibg12H9MHLPwtwEXJgZDP10k3/pubhtml?widget=true&headers=false"></iframe>
+      </div>
     </div>
   </section>
 
-
-  <!-- =======================================================
-       БЛОК 2.3. ПРАВА КОЛОНКА
-       ======================================================= -->
+  <!-- Права колонка -->
   <section class="right">
-
-    <!-- Годинник -->
-    <article class="card">
+    <div class="card">
       <h2>Дата і час</h2>
-
       <div class="clock">
         <div class="time" id="time">--:--:--</div>
         <div class="date" id="date">—</div>
       </div>
-    </article>
-
-
-    <!-- Контакти -->
-    <article class="card">
+    </div>
+    <div class="card">
       <h2>Контакти керівників</h2>
-
       <div class="contacts">
 <pre>Начальник Цеху
 Чиркін Олександр — 096 646 93 22
@@ -658,570 +194,95 @@ iframe {
 Кісітов Андрій — 050 886 46 11
 Бондаренко Олексій — 050 827 44 52</pre>
       </div>
-    </article>
-
-
-    <!-- Оголошення -->
-    <article class="card" id="announcement-card" style="display:none;">
+    </div>
+    <div class="card">
       <h2>Оголошення</h2>
-      <div class="ann" id="announcement-content"></div>
-    </article>
-
-
-    <!-- Дні народження — прихований до моменту появи записів -->
-    <article class="card" id="bday-card">
-      <h2>Дні народження</h2>
-
-      <div class="bday-container">
-        <div id="bday-title-dynamic">Перевірка дат...</div>
-        <ul id="bday-list"></ul>
+      <div class="ann"><!-- додай текст оголошення тут -->
+<pre>1. !!!УВАГА!!! З 1 січня 2026 року, премія за 32 понаднормових години нараховуватись НЕ БУДЕ.
+2. З 2026 року працівники, котрі мають бронювання, при наявності прогулу будуть зняті з броні.</pre>
+        
+      
       </div>
-    </article>
-
+    </div>
   </section>
-</main>
-
-
-<!-- =========================================================
-     БЛОК 3. ЗАВАНТАЖЕННЯ ДРУГОЇ GOOGLE ТАБЛИЦІ
-     ========================================================= -->
+</div>
 <script>
-(function () {
-  const frame = document.getElementById('hours-frame');
-  if (!frame) return;
-
-  const loadHoursSheet = () => {
-    if (frame.src) return;
-    frame.src = frame.dataset.src;
-  };
-
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(loadHoursSheet, { timeout: 1200 });
-  } else {
-    setTimeout(loadHoursSheet, 800);
-  }
-})();
-</script>
-
-
-
-<!-- =========================================================
-     БЛОК 4. ОГОЛОШЕННЯ З ЛИСТА "Лист2"
-     ========================================================= -->
-<style>
-#announcement-card .ann {
-  min-height: 0;
-  overflow: hidden;
-}
-#announcement-content {
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow: hidden;
-  font-size: clamp(13px, 0.78vw, 18px);
-  line-height: 1.12;
-}
-</style>
-
-<script>
-(function () {
-  const spreadsheetId = "1irhlMh0tuj6qqvVfB8P1SsFi2EdL-8sdHNzqFqDitrg";
-  const sheetName = "Лист2";
-
-  const card = document.getElementById("announcement-card");
-  const content = document.getElementById("announcement-content");
-
-  if (!card || !content) return;
-
-  function hideAnnouncement() {
-    card.style.display = "none";
-    content.textContent = "";
-  }
-
-  function loadAnnouncements() {
-    const callbackName =
-      "__announcementSheetCallback_" + Math.random().toString(36).slice(2);
-
-    const script = document.createElement("script");
-
-    window[callbackName] = function (data) {
-      try {
-        const rows =
-          data && data.table && Array.isArray(data.table.rows)
-            ? data.table.rows
-            : [];
-
-        const lines = [];
-
-        rows.forEach(function (row) {
-          const cells = row && Array.isArray(row.c) ? row.c : [];
-          const values = [];
-
-          cells.forEach(function (cell) {
-            if (!cell) return;
-
-            const value =
-              cell.f != null ? String(cell.f).trim() :
-              cell.v != null ? String(cell.v).trim() : "";
-
-            if (value) values.push(value);
-          });
-
-          if (values.length) {
-            lines.push(values.join(" — "));
-          }
-        });
-
-        if (lines.length) {
-          content.textContent = lines.join("\\n");
-          card.style.display = "flex";
-        } else {
-          hideAnnouncement();
-        }
-      } catch (e) {
-        console.error("Помилка читання оголошень:", e);
-        hideAnnouncement();
-      }
-
-      cleanup();
-    };
-
-    script.src =
-      "https://docs.google.com/spreadsheets/d/" +
-      spreadsheetId +
-      "/gviz/tq?tqx=responseHandler:" +
-      encodeURIComponent(callbackName) +
-      "&sheet=" +
-      encodeURIComponent(sheetName);
-
-    script.async = true;
-
-    const timeout = setTimeout(function () {
-      hideAnnouncement();
-      cleanup();
-    }, 10000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      if (script.parentNode) script.parentNode.removeChild(script);
-
-      try {
-        delete window[callbackName];
-      } catch (e) {
-        window[callbackName] = undefined;
-      }
-    }
-
-    script.onerror = function () {
-      hideAnnouncement();
-      cleanup();
-    };
-
-    document.head.appendChild(script);
-  }
-
-  loadAnnouncements();
-
-  // Оновлюємо тільки оголошення, без перезавантаження всієї сторінки.
-  setInterval(loadAnnouncements, 5 * 60 * 1000);
-})();
-</script>
-
-<!-- =========================================================
-     БЛОК 4. ДНІ НАРОДЖЕННЯ
-     ========================================================= -->
-<script>
-(function () {
-  const spreadsheetId = "1irhlMh0tuj6qqvVfB8P1SsFi2EdL-8sdHNzqFqDitrg";
-  const gid = "178763112";
-
-  const cardEl = document.getElementById('bday-card');
-  const titleEl = document.getElementById('bday-title-dynamic');
-  const listEl = document.getElementById('bday-list');
-  const rightEl = document.querySelector('.right');
-
-  if (!cardEl || !titleEl || !listEl || !rightEl) return;
-
-  function hideBirthdayCard() {
-    cardEl.style.display = 'none';
-    rightEl.classList.remove('bday-visible');
-  }
-
-  function normalizeDate(value) {
-    if (value === null || value === undefined) return "";
-
-    const s = String(value).trim();
-
-    const googleDate = s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})\)$/);
-    if (googleDate) {
-      return String(Number(googleDate[3])).padStart(2, '0') + "." +
-             String(Number(googleDate[2]) + 1).padStart(2, '0');
-    }
-
-    let m = s.match(/^\s*(\d{1,2})[.\-/](\d{1,2})(?:[.\-/]\d{2,4})?\s*$/);
-    if (m) {
-      return String(Number(m[1])).padStart(2, '0') + "." +
-             String(Number(m[2])).padStart(2, '0');
-    }
-
-    m = s.match(/^\s*\d{4}[.\-/](\d{1,2})[.\-/](\d{1,2})/);
-    if (m) {
-      return String(Number(m[3])).padStart(2, '0') + "." +
-             String(Number(m[2])).padStart(2, '0');
-    }
-
-    m = s.match(/(^|[^\d])(\d{1,2})\.(\d{1,2})(?:[^\d]|$)/);
-    if (m) {
-      return String(Number(m[2])).padStart(2, '0') + "." +
-             String(Number(m[3])).padStart(2, '0');
-    }
-
-    return "";
-  }
-
-  function render(data) {
-    try {
-      const rows = data?.table?.rows;
-      if (!Array.isArray(rows)) {
-        hideBirthdayCard();
-        return;
-      }
-
-      const now = new Date();
-      now.setHours(12, 0, 0, 0);
-
-      const todayKey =
-        String(now.getDate()).padStart(2, '0') + "." +
-        String(now.getMonth() + 1).padStart(2, '0');
-
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const tomorrowKey =
-        String(tomorrow.getDate()).padStart(2, '0') + "." +
-        String(tomorrow.getMonth() + 1).padStart(2, '0');
-
-      const birthdays = [];
-
-      for (const row of rows) {
-        const cells = row?.c;
-        if (!cells || cells.length < 2) continue;
-
-        const name = cells[0]?.v == null ? "" : String(cells[0].v).trim();
-        if (!name) continue;
-
-        const lower = name.toLowerCase();
-        if (
-          lower.includes("ім'я") ||
-          lower.includes("ім’я") ||
-          lower === "імя" ||
-          lower.includes("днюхи")
-        ) continue;
-
-        const formatted = cells[1]?.f == null ? "" : String(cells[1].f).trim();
-        const raw = cells[1]?.v == null ? "" : String(cells[1].v).trim();
-        const date = normalizeDate(formatted) || normalizeDate(raw);
-
-        if (date === todayKey) {
-          birthdays.push({ name, label: "Сьогодні! 🎉" });
-        } else if (date === tomorrowKey) {
-          birthdays.push({ name, label: "Завтра! 🎉" });
-        }
-      }
-
-      listEl.replaceChildren();
-
-      if (!birthdays.length) {
-        hideBirthdayCard();
-        return;
-      }
-
-      for (const birthday of birthdays) {
-        const li = document.createElement('li');
-        li.className = 'bday-item';
-
-        const name = document.createElement('span');
-        name.className = 'bday-name';
-        name.textContent = birthday.name;
-
-        const label = document.createElement('span');
-        label.style.color = 'var(--danger)';
-        label.style.fontWeight = '700';
-        label.style.whiteSpace = 'nowrap';
-        label.textContent = birthday.label;
-
-        li.append(name, label);
-        listEl.appendChild(li);
-      }
-
-      const hasToday = birthdays.some(b => b.label.startsWith("Сьогодні"));
-      const hasTomorrow = birthdays.some(b => b.label.startsWith("Завтра"));
-
-      titleEl.textContent =
-        hasToday && hasTomorrow ? "🎂 Дні народження:" :
-        hasToday ? "🎂 Сьогодні святкують:" :
-        "🎂 Завтра святкують:";
-
-      cardEl.style.display = 'flex';
-      rightEl.classList.add('bday-visible');
-
-    } catch (error) {
-      console.error("Помилка обробки ДН:", error);
-      hideBirthdayCard();
-    }
-  }
-
-  function loadBirthdays() {
-    const callbackName =
-      "__birthdaySheet_" + Date.now() + "_" +
-      Math.random().toString(36).slice(2);
-
-    let script = document.createElement('script');
-    let timeoutId;
-
-    window[callbackName] = function (data) {
-      clearTimeout(timeoutId);
-      render(data);
-      cleanup();
-    };
-
-    function cleanup() {
-      if (script.parentNode) script.parentNode.removeChild(script);
-      try {
-        delete window[callbackName];
-      } catch (_) {
-        window[callbackName] = undefined;
-      }
-    }
-
-    script.src =
-      "https://docs.google.com/spreadsheets/d/" +
-      spreadsheetId +
-      "/gviz/tq?tqx=responseHandler:" +
-      encodeURIComponent(callbackName) +
-      "&gid=" + encodeURIComponent(gid);
-
-    script.async = true;
-
-    script.onerror = function () {
-      clearTimeout(timeoutId);
-      hideBirthdayCard();
-      cleanup();
-    };
-
-    timeoutId = setTimeout(function () {
-      hideBirthdayCard();
-      cleanup();
-    }, 8000);
-
-    document.head.appendChild(script);
-  }
-
-  loadBirthdays();
-
-  // Оновлюємо лише дані ДН, а не всю сторінку.
-  setInterval(loadBirthdays, 5 * 60 * 1000);
-})();
-</script>
-
-
-<!-- =========================================================
-     БЛОК 5. ГОДИННИК
-     ========================================================= -->
-<script>
-(function () {
-  const timeEl = document.getElementById('time');
-  const dateEl = document.getElementById('date');
-
-  function pad(n) {
-    return String(n).padStart(2, '0');
-  }
-
-  function tick() {
-    const now = new Date();
-
-    if (timeEl) {
-      timeEl.textContent =
-        pad(now.getHours()) + ":" +
-        pad(now.getMinutes()) + ":" +
-        pad(now.getSeconds());
-    }
-
-    if (dateEl) {
-      const date = now.toLocaleDateString('uk-UA', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-
-      dateEl.textContent =
-        date.charAt(0).toUpperCase() + date.slice(1);
-    }
-  }
-
-  tick();
-  setInterval(tick, 1000);
-})();
-</script>
-
-
-<!-- =========================================================
-     БЛОК 6. ОПТИМІЗОВАНИЙ СНІГ
-     ========================================================= -->
-<script>
-(function () {
+(function() {
   const canvas = document.getElementById('snow');
-  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w = canvas.width = innerWidth;
+  let h = canvas.height = innerHeight;
 
-  const ctx = canvas.getContext('2d', { alpha: true });
-  if (!ctx) return;
+  window.addEventListener('resize', () => {
+    w = canvas.width = innerWidth;
+    h = canvas.height = innerHeight;
+  });
 
-  const reduceMotion =
-    window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (reduceMotion) return;
-
-  /*
-   * Для 4K Raspberry Pi:
-   * - 24 FPS;
-   * - максимум 24 сніжинки;
-   * - DPR завжди 1;
-   * - без тіней і градієнтів;
-   * - мінімум математичних операцій.
-   */
-  const MAX_FLAKES = 24;
-  const FRAME_MS = 1000 / 24;
+  const flakesCount = Math.min(220, Math.floor((w*h)/4000));
   const flakes = [];
 
-  let width = 0;
-  let height = 0;
-  let last = 0;
-  let active = true;
-  let resizeTimer = 0;
+  function rand(min, max){ return Math.random()*(max-min)+min; }
 
-  function makeFlake(initial) {
-    const size = 1 + Math.random() * 1.8;
-
-    return {
-      x: Math.random() * width,
-      y: initial ? Math.random() * height : -size - Math.random() * 20,
-      size,
-      speed: 12 + Math.random() * 16,
-      drift: (Math.random() - .5) * 5,
-      phase: Math.random() * 6.28,
-      alpha: .35 + Math.random() * .45
-    };
+  for (let i=0;i<flakesCount;i++){
+    flakes.push({
+      x: rand(0,w),
+      y: rand(0,h),
+      r: rand(0.7,3.2),
+      vx: rand(-0.5,0.5),
+      vy: rand(0.3,1.2),
+      swing: rand(0,Math.PI*2),
+      swingSpeed: rand(0.002,0.01)
+    });
   }
 
-  function resize() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-
-    canvas.width = Math.max(1, width);
-    canvas.height = Math.max(1, height);
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-    const count = Math.min(
-      MAX_FLAKES,
-      Math.max(12, Math.round((width * height) / 100000))
-    );
-
-    while (flakes.length < count) flakes.push(makeFlake(true));
-    while (flakes.length > count) flakes.pop();
-  }
-
-  function draw(now) {
-    if (!active) return;
-
-    const elapsed = now - last;
-    if (elapsed < FRAME_MS) {
-      requestAnimationFrame(draw);
-      return;
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    for (let f of flakes){
+      ctx.moveTo(f.x,f.y);
+      ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
     }
+    ctx.fill();
+  }
 
-    last = now;
+  function update(){
+    for (let f of flakes){
+      f.swing += f.swingSpeed;
+      f.x += Math.sin(f.swing) * f.vx + f.vx;
+      f.y += f.vy;
 
-    const dt = Math.min(elapsed / 1000, .05);
+      if (Math.random() < 0.0008) f.x += rand(-1,1);
 
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#fff';
-
-    for (let i = 0; i < flakes.length; i++) {
-      const f = flakes[i];
-
-      f.y += f.speed * dt;
-      f.x += Math.sin(f.phase + f.y * .008) * f.drift * dt;
-
-      if (f.y > height + f.size) {
-        flakes[i] = makeFlake(false);
-        continue;
+      if (f.y > h + 10 || f.x < -10 || f.x > w + 10){
+        f.x = rand(0,w);
+        f.y = -10;
+        f.r = rand(0.7,3.2);
+        f.vx = rand(-0.5,0.5);
+        f.vy = rand(0.3,1.2);
       }
-
-      if (f.x < -4) f.x = width + 4;
-      if (f.x > width + 4) f.x = -4;
-
-      ctx.globalAlpha = f.alpha;
-      ctx.beginPath();
-      ctx.arc(f.x, f.y, f.size, 0, 6.283);
-      ctx.fill();
     }
-
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(draw);
   }
 
-  document.addEventListener('visibilitychange', function () {
-    active = !document.hidden;
-
-    if (active) {
-      last = 0;
-      requestAnimationFrame(draw);
-    }
-  });
-
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(resize, 200);
-  }, { passive: true });
-
-  resize();
-  requestAnimationFrame(draw);
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
 })();
 </script>
-
 
 <script>
-(function () {
-  const right = document.querySelector('.right');
-  if (!right) return;
-
-  function syncRightLayout() {
-    const announcement = document.getElementById('announcement-card');
-    const birthday = document.getElementById('bday-card');
-
-    const announcementVisible =
-      announcement && getComputedStyle(announcement).display !== 'none';
-
-    const birthdayVisible =
-      birthday && getComputedStyle(birthday).display !== 'none';
-
-    right.classList.toggle('has-announcement', !!announcementVisible);
-    right.classList.toggle('has-birthday', !!birthdayVisible);
-  }
-
-  const observer = new MutationObserver(syncRightLayout);
-  observer.observe(right, {
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['style', 'class']
-  });
-
-  syncRightLayout();
-  setInterval(syncRightLayout, 1000);
-})();
+function pad(n){return String(n).padStart(2,'0')}
+function tick(){
+  const now=new Date();
+  const t=`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const d=now.toLocaleDateString('uk-UA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('time').textContent=t;
+  document.getElementById('date').textContent=d.charAt(0).toUpperCase()+d.slice(1);
+}
+setInterval(tick,1000); tick();
 </script>
-
 </body>
 </html>
