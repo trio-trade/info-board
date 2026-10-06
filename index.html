@@ -45,7 +45,25 @@ body{
 
 /* права колонка */
 .right{
-  display:grid; grid-template-rows:1fr 1fr 1fr; gap:var(--gap);
+  display:grid;
+  grid-template-rows:repeat(3, minmax(0, 1fr));
+  gap:var(--gap);
+  min-height:0;
+}
+
+.right.bday-visible{
+  grid-template-rows:repeat(3, minmax(0, 1fr)) auto;
+}
+
+.right.bday-visible #bday-card{
+  min-height:0;
+  padding-top:12px;
+  padding-bottom:12px;
+}
+
+.right.bday-visible #bday-card h2{
+  margin-top:0;
+  margin-bottom:8px;
 }
 .card{
   background:var(--panel); border:1px solid rgba(255,255,255,.08);
@@ -139,13 +157,14 @@ body{
 <meta http-equiv="refresh" content="1800">
 
  <!-- сніг та кульки    -->
-<!-- <canvas id="snow"></canvas>
+<!-- 
+ <canvas id="snow"></canvas>
 <div class="corner-top-right">
   <div class="hanger h1"><div class="ornament red"></div></div>
   <div class="hanger h2"><div class="ornament gold"></div></div>
   <div class="hanger h3"><div class="ornament blue"></div></div>
-</div>-->
-
+</div>
+-->
 <div class="wrap">
   <!-- Ліва колонка -->
   <section class="col">
@@ -174,7 +193,7 @@ body{
   </section>
 
   <!-- Права колонка -->
-  <section class="right">
+<section class="right">
     <div class="card">
       <h2>Дата і час</h2>
       <div class="clock">
@@ -200,78 +219,250 @@ body{
       <div class="ann"><!-- додай текст оголошення тут -->
 <pre>1. !!!УВАГА!!! З 1 січня 2026 року, премія за 32 понаднормових години нараховуватись НЕ БУДЕ.
 2. З 2026 року працівники, котрі мають бронювання, при наявності прогулу будуть зняті з броні.</pre>
-        
-      
       </div>
     </div>
-  </section>
-</div>
+
+    <!-- Окремий блок для Днів Народження -->
+    <div class="card" id="bday-card" style="display:none;">
+      <h2>Дні народження</h2>
+      <div class="bday-container">
+        <div id="bday-title-dynamic" style="font-weight:bold; color:#ff5376; text-align:center; margin-bottom:8px; font-size:16px;">Перевірка дат...</div>
+        <ul id="bday-list" style="list-style:none; padding:0; margin:0;"></ul>
+      </div>
+    </div>
+
+<style>
+  .bday-container {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .bday-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .bday-item:last-child { border-bottom: none; }
+  .bday-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; flex: 1; }
+</style>
+
 <script>
-(function() {
-  const canvas = document.getElementById('snow');
-  const ctx = canvas.getContext('2d');
-  let w = canvas.width = innerWidth;
-  let h = canvas.height = innerHeight;
+  (function() {
+    const spreadsheetId = "1irhlMh0tuj6qqvVfB8P1SsFi2EdL-8sdHNzqFqDitrg";
+    const gid = "178763112";
 
-  window.addEventListener('resize', () => {
-    w = canvas.width = innerWidth;
-    h = canvas.height = innerHeight;
-  });
+    const cardEl = document.getElementById('bday-card');
+    const titleEl = document.getElementById('bday-title-dynamic');
+    const listEl = document.getElementById('bday-list');
+    const rightEl = document.querySelector('.right');
 
-  const flakesCount = Math.min(220, Math.floor((w*h)/4000));
-  const flakes = [];
+    if (!cardEl || !titleEl || !listEl || !rightEl) return;
 
-  function rand(min, max){ return Math.random()*(max-min)+min; }
-
-  for (let i=0;i<flakesCount;i++){
-    flakes.push({
-      x: rand(0,w),
-      y: rand(0,h),
-      r: rand(0.7,3.2),
-      vx: rand(-0.5,0.5),
-      vy: rand(0.3,1.2),
-      swing: rand(0,Math.PI*2),
-      swingSpeed: rand(0.002,0.01)
-    });
-  }
-
-  function draw(){
-    ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.beginPath();
-    for (let f of flakes){
-      ctx.moveTo(f.x,f.y);
-      ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+    function hideBirthdayCard() {
+      cardEl.style.display = 'none';
+      rightEl.classList.remove('bday-visible');
     }
-    ctx.fill();
-  }
 
-  function update(){
-    for (let f of flakes){
-      f.swing += f.swingSpeed;
-      f.x += Math.sin(f.swing) * f.vx + f.vx;
-      f.y += f.vy;
+    function normalizeDate(value) {
+      if (value === null || value === undefined) return "";
 
-      if (Math.random() < 0.0008) f.x += rand(-1,1);
+      let s = String(value).trim();
 
-      if (f.y > h + 10 || f.x < -10 || f.x > w + 10){
-        f.x = rand(0,w);
-        f.y = -10;
-        f.r = rand(0.7,3.2);
-        f.vx = rand(-0.5,0.5);
-        f.vy = rand(0.3,1.2);
+      // Google Sheets can return a date as Date(YYYY,M,D)
+      const googleDate = s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})\)$/);
+      if (googleDate) {
+        return String(Number(googleDate[3])).padStart(2, '0') + "." +
+               String(Number(googleDate[2]) + 1).padStart(2, '0');
+      }
+
+      // Extract DD.MM from common formats: DD.MM, DD.MM.YYYY,
+      // DD-MM-YYYY, YYYY-MM-DD, etc.
+      let m = s.match(/^\s*(\d{1,2})[.\-/](\d{1,2})(?:[.\-/]\d{2,4})?\s*$/);
+      if (m) {
+        return String(Number(m[1])).padStart(2, '0') + "." +
+               String(Number(m[2])).padStart(2, '0');
+      }
+
+      // ISO date: YYYY-MM-DD
+      m = s.match(/^\s*\d{4}[.\-/](\d{1,2})[.\-/](\d{1,2})/);
+      if (m) {
+        return String(Number(m[3])).padStart(2, '0') + "." +
+               String(Number(m[2])).padStart(2, '0');
+      }
+
+      // If Google formatted the date as text containing DD.MM, extract it.
+      m = s.match(/(^|[^\d])(\d{1,2})\.(\d{1,2})(?:[^\d]|$)/);
+      if (m) {
+        return String(Number(m[2])).padStart(2, '0') + "." +
+               String(Number(m[3])).padStart(2, '0');
+      }
+
+      return "";
+    }
+
+    function render(data) {
+      try {
+        const rows = data && data.table && Array.isArray(data.table.rows)
+          ? data.table.rows
+          : [];
+
+        const now = new Date();
+        now.setHours(12, 0, 0, 0);
+
+        const todayKey =
+          String(now.getDate()).padStart(2, '0') + "." +
+          String(now.getMonth() + 1).padStart(2, '0');
+
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const tomorrowKey =
+          String(tomorrow.getDate()).padStart(2, '0') + "." +
+          String(tomorrow.getMonth() + 1).padStart(2, '0');
+
+        listEl.innerHTML = "";
+        let birthdays = [];
+
+        rows.forEach(function(row) {
+          const cells = row && row.c ? row.c : [];
+          if (cells.length < 2) return;
+
+          const nameCell = cells[0];
+          const dateCell = cells[1];
+
+          const name = nameCell && nameCell.v != null
+            ? String(nameCell.v).trim()
+            : "";
+
+          const formattedDate = dateCell && dateCell.f != null
+            ? String(dateCell.f).trim()
+            : "";
+
+          const rawDate = dateCell && dateCell.v != null
+            ? String(dateCell.v).trim()
+            : "";
+
+          if (!name) return;
+
+          const nameLower = name.toLowerCase();
+          if (
+            nameLower.includes("ім'я") ||
+            nameLower.includes("ім’я") ||
+            nameLower === "імя" ||
+            nameLower.includes("днюхи")
+          ) return;
+
+          const cleanDate =
+            normalizeDate(formattedDate) ||
+            normalizeDate(rawDate);
+
+          if (cleanDate === todayKey) {
+            birthdays.push({ name: name, label: 'Сьогодні! 🎉' });
+          } else if (cleanDate === tomorrowKey) {
+            birthdays.push({ name: name, label: 'Завтра! 🎉' });
+          }
+        });
+
+        if (birthdays.length) {
+          birthdays.forEach(function(birthday) {
+            const li = document.createElement('li');
+            li.className = 'bday-item';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'bday-name';
+
+            const strong = document.createElement('strong');
+            strong.textContent = birthday.name;
+            nameSpan.appendChild(strong);
+
+            const labelSpan = document.createElement('span');
+            labelSpan.style.cssText =
+              'color:#ff5376; font-weight:bold; white-space:nowrap;';
+            labelSpan.textContent = birthday.label;
+
+            li.appendChild(nameSpan);
+            li.appendChild(labelSpan);
+            listEl.appendChild(li);
+          });
+
+          cardEl.style.display = 'flex';
+          rightEl.classList.add('bday-visible');
+
+          const hasToday = birthdays.some(function(b) {
+            return b.label.indexOf('Сьогодні') === 0;
+          });
+          const hasTomorrow = birthdays.some(function(b) {
+            return b.label.indexOf('Завтра') === 0;
+          });
+
+          if (hasToday && hasTomorrow) {
+            titleEl.textContent = "🎂 Дні народження:";
+          } else if (hasToday) {
+            titleEl.textContent = "🎂 Сьогодні святкують:";
+          } else {
+            titleEl.textContent = "🎂 Завтра святкують:";
+          }
+        } else {
+          hideBirthdayCard();
+        }
+      } catch (e) {
+        console.error("Помилка обробки ДН:", e);
+        hideBirthdayCard();
       }
     }
-  }
 
-  function loop(){
-    update();
-    draw();
-    requestAnimationFrame(loop);
-  }
-  loop();
-})();
+    // JSONP works without browser CORS restrictions.
+    const callbackName =
+      "__birthdaySheetCallback_" + Math.random().toString(36).slice(2);
+
+    window[callbackName] = function(data) {
+      render(data);
+      cleanup();
+    };
+
+    const script = document.createElement('script');
+    script.src =
+      "https://docs.google.com/spreadsheets/d/" +
+      spreadsheetId +
+      "/gviz/tq?tqx=responseHandler:" +
+      encodeURIComponent(callbackName) +
+      "&gid=" +
+      encodeURIComponent(gid);
+
+    script.async = true;
+
+    const timeout = setTimeout(function() {
+      console.error("Не вдалося отримати дані з Google Sheets.");
+      hideBirthdayCard();
+      cleanup();
+    }, 10000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      try {
+        delete window[callbackName];
+      } catch (e) {
+        window[callbackName] = undefined;
+      }
+    }
+
+    script.onerror = function() {
+      console.error("Помилка підключення Google Sheets.");
+      hideBirthdayCard();
+      cleanup();
+    };
+
+    document.head.appendChild(script);
+  })();
 </script>
+</section>
+
+</div>
+
 
 <script>
 function pad(n){return String(n).padStart(2,'0')}
@@ -279,8 +470,11 @@ function tick(){
   const now=new Date();
   const t=`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   const d=now.toLocaleDateString('uk-UA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('time').textContent=t;
-  document.getElementById('date').textContent=d.charAt(0).toUpperCase()+d.slice(1);
+  const timeEl = document.getElementById('time');
+  const dateEl = document.getElementById('date');
+
+  if (timeEl) timeEl.textContent = t;
+  if (dateEl) dateEl.textContent = d.charAt(0).toUpperCase() + d.slice(1);
 }
 setInterval(tick,1000); tick();
 </script>
