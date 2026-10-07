@@ -75,7 +75,7 @@ body{
 .clock .time{font-size:min(10vw,10vh); font-weight:800; line-height:1}
 .clock .date{margin-top:8px; font-size:min(3vw,3vh); color:var(--muted)}
 .contacts, .ann{font-size:min(2vw,2vh); overflow:auto;}
-.contacts pre, .ann pre{margin:0; white-space:pre-wrap;font-size: 16px;}
+.contacts pre, .ann pre{margin:0; white-space:pre-wrap;font-size: 12px;}
     canvas#snow {
     position:fixed;
     top:0;
@@ -206,7 +206,6 @@ body{
       <div class="contacts">
 <pre>Начальник Цеху
 Чиркін Олександр — 096 646 93 22
-
 Бригадири:
 Авер'янов Ігор — 068 679 59 98
 Заграничний Марк — 096 047 19 58
@@ -360,9 +359,9 @@ body{
             normalizeDate(rawDate);
 
           if (cleanDate === todayKey) {
-            birthdays.push({ name: name, label: 'Сьогодні! 🎉' });
+            birthdays.push({ name: name, label: 'Сьогодні! ★' });
           } else if (cleanDate === tomorrowKey) {
-            birthdays.push({ name: name, label: 'Завтра! 🎉' });
+            birthdays.push({ name: name, label: 'Завтра! ★' });
           }
         });
 
@@ -399,11 +398,11 @@ body{
           });
 
           if (hasToday && hasTomorrow) {
-            titleEl.textContent = "🎂 Дні народження:";
+            titleEl.textContent = "★ Дні народження:";
           } else if (hasToday) {
-            titleEl.textContent = "🎂 Сьогодні святкують:";
+            titleEl.textContent = "★ Сьогодні святкують:";
           } else {
-            titleEl.textContent = "🎂 Завтра святкують:";
+            titleEl.textContent = "★ Завтра святкують:";
           }
         } else {
           hideBirthdayCard();
