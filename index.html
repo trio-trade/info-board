@@ -51,6 +51,13 @@ body{
   min-height:0;
 }
 
+.right.announcement-hidden:not(.bday-visible){
+  grid-template-rows:repeat(2, minmax(0, 1fr));
+}
+.right.announcement-hidden.bday-visible{
+  grid-template-rows:repeat(2, minmax(0, 1fr)) auto;
+}
+
 .right.bday-visible{
   grid-template-rows:repeat(3, minmax(0, 1fr)) auto;
 }
@@ -151,6 +158,27 @@ body{
 
 
 
+
+   /* Спливаюче вікно свята */
+   .holiday-overlay {
+     position:fixed; inset:0; z-index:9999; display:none;
+     align-items:center; justify-content:center;
+     background:rgba(0,0,0,.72); padding:24px;
+   }
+   .holiday-dialog {
+     width:min(560px, 92vw); max-height:80vh; overflow:auto;
+     background:var(--panel); color:var(--text);
+     border:1px solid rgba(83,214,255,.45); border-radius:18px;
+     padding:28px; text-align:center; box-shadow:0 18px 70px rgba(0,0,0,.5);
+   }
+   .holiday-dialog h2 { margin:0 0 14px; color:var(--accent); font-size:min(4vw,4vh); }
+   .holiday-dialog p { margin:0; white-space:pre-wrap; font-size:min(2.5vw,2.5vh); line-height:1.5; }
+   .holiday-close {
+     margin-top:22px; padding:10px 24px; border:1px solid var(--accent);
+     border-radius:10px; color:var(--text); background:transparent;
+     font:inherit; cursor:pointer;
+   }
+
 </style>
 </head>
 <body>
@@ -165,6 +193,14 @@ body{
   <div class="hanger h3"><div class="ornament blue"></div></div>
 </div>
 -->
+<div class="holiday-overlay" id="holiday-overlay" role="dialog" aria-modal="true" aria-labelledby="holiday-heading">
+  <div class="holiday-dialog">
+    <h2 id="holiday-heading">Сьогоднішнє свято</h2>
+    <p id="holiday-text"></p>
+    <button class="holiday-close" id="holiday-close" type="button">Закрити</button>
+  </div>
+</div>
+
 <div class="wrap">
   <!-- Ліва колонка -->
   <section class="col">
@@ -193,7 +229,7 @@ body{
   </section>
 
   <!-- Права колонка -->
-<section class="right">
+<section class="right announcement-hidden">
     <div class="card">
       <h2>Дата і час</h2>
       <div class="clock">
@@ -213,12 +249,9 @@ body{
 Бондаренко Олексій — 050 827 44 52</pre>
       </div>
     </div>
-    <div class="card">
+    <div class="card" id="announcement-card" style="display:none;">
       <h2>Оголошення</h2>
-      <div class="ann"><!-- додай текст оголошення тут -->
-<pre>1. !!!УВАГА!!! З 1 січня 2026 року, премія за 32 понаднормових години нараховуватись НЕ БУДЕ.
-2. З 2026 року працівники, котрі мають бронювання, при наявності прогулу будуть зняті з броні.</pre>
-      </div>
+      <div class="ann"><pre id="announcement-text"></pre></div>
     </div>
 
     <!-- Окремий блок для Днів Народження -->
@@ -457,6 +490,109 @@ body{
 
     document.head.appendChild(script);
   })();
+</script>
+
+<script>
+(function() {
+  const spreadsheetId = "1irhlMh0tuj6qqvVfB8P1SsFi2EdL-8sdHNzqFqDitrg";
+  const sheetGid = "1077003670";
+  const card = document.getElementById("announcement-card");
+  const textEl = document.getElementById("announcement-text");
+  if (!card || !textEl) return;
+
+  function hideAnnouncement() {
+    card.style.display = "none";
+    const rightEl = document.querySelector(".right");
+    if (rightEl) rightEl.classList.add("announcement-hidden");
+  }
+
+  function renderAnnouncements(data) {
+    try {
+      const rows = data && data.table && Array.isArray(data.table.rows) ? data.table.rows : [];
+      const lines = [];
+      rows.forEach(function(row) {
+        const cells = row && row.c ? row.c : [];
+        const values = cells.map(function(cell) {
+          if (!cell) return "";
+          const value = cell.f != null ? cell.f : cell.v;
+          return value == null ? "" : String(value).trim();
+        }).filter(Boolean);
+        if (values.length) lines.push(values.join(" "));
+      });
+      const announcement = lines.join("\\n").trim();
+      if (!announcement) { hideAnnouncement(); return; }
+      textEl.textContent = announcement;
+      card.style.display = "flex";
+      const rightEl = document.querySelector(".right");
+      if (rightEl) rightEl.classList.remove("announcement-hidden");
+    } catch (e) {
+      console.error("Помилка обробки оголошень:", e);
+      hideAnnouncement();
+    }
+  }
+
+  const callbackName = "__announcementSheetCallback_" + Math.random().toString(36).slice(2);
+  let finished = false;
+  const script = document.createElement("script");
+  const timeout = setTimeout(function() {
+    if (finished) return;
+    finished = true; hideAnnouncement(); cleanup();
+  }, 10000);
+
+  function cleanup() {
+    clearTimeout(timeout);
+    if (script.parentNode) script.parentNode.removeChild(script);
+    try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+  }
+
+  window[callbackName] = function(data) {
+    if (finished) return;
+    finished = true; renderAnnouncements(data); cleanup();
+  };
+  script.src = "https://docs.google.com/spreadsheets/d/" + spreadsheetId +
+    "/gviz/tq?tqx=responseHandler:" + encodeURIComponent(callbackName) +
+    "&gid=" + encodeURIComponent(sheetGid);
+  script.async = true;
+  script.onerror = function() {
+    if (finished) return;
+    finished = true; hideAnnouncement(); cleanup();
+  };
+  document.head.appendChild(script);
+})();
+</script>
+
+<script>
+(function() {
+  const overlay = document.getElementById("holiday-overlay");
+  const textEl = document.getElementById("holiday-text");
+  const closeBtn = document.getElementById("holiday-close");
+  if (!overlay || !textEl || !closeBtn) return;
+
+  closeBtn.addEventListener("click", function() { overlay.style.display = "none"; });
+  overlay.addEventListener("click", function(event) {
+    if (event.target === overlay) overlay.style.display = "none";
+  });
+
+  const today = new Date();
+  const year = today.getFullYear();
+  const todayISO = year + "-" + String(today.getMonth() + 1).padStart(2, "0") +
+    "-" + String(today.getDate()).padStart(2, "0");
+
+  fetch("https://nagerholidays.com/publicholiday/ukraine/2026" + year + "/UA")
+    .then(function(response) {
+      if (!response.ok) throw new Error("Не вдалося завантажити свята");
+      return response.json();
+    })
+    .then(function(holidays) {
+      const matches = holidays.filter(function(holiday) { return holiday.date === todayISO; });
+      if (!matches.length) return;
+      textEl.textContent = matches.map(function(holiday) {
+        return holiday.localName || holiday.name;
+      }).join("\\n");
+      overlay.style.display = "flex";
+    })
+    .catch(function(error) { console.warn("Не вдалося перевірити свята:", error); });
+})();
 </script>
 </section>
 
